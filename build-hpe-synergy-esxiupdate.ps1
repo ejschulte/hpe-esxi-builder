@@ -509,6 +509,18 @@ function Main {
             -SoftwareSpec $patchDefinitionPath `
             -Destination $newOfflineBundlePath
 
+        Write-Host "Adding bundle to software depot: $newOfflineBundlePath"
+        Add-EsxSoftwareDepot $newOfflineBundlePath | Out-Null
+
+        Write-Host "Creating new image profile based on $selectedBaseImageVersion with HPE SSP patch"
+        $imageProfileName = (Get-EsxImageProfile).Name
+        $baseImageBuild = $imageProfileName.split(".")[-1]
+        $newImageProfile = "HPE-$hardwareSupportPackageVersion-$baseImageBuild"
+        New-EsxImageProfile -CloneProfile $imageProfileName -Name $newImageProfile -Vendor 'HPE' | Out-Null
+
+        Export-EsxImageProfile -ImageProfile $newImageProfile -ExportToIso -FilePath (Join-Path -Path $workingDirectory -ChildPath ("{0}.iso" -f $newImageProfile))
+        Export-EsxImageProfile -ImageProfile $newImageProfile -ExportToBundle -FilePath (Join-Path -Path $workingDirectory -ChildPath ("{0}-depot.zip" -f $newImageProfile))
+
         Write-Host ''
         Write-Host 'Completed successfully.'
         Write-Host "Depot ZIP: $workingDepotZipPath"
@@ -517,6 +529,9 @@ function Main {
         Write-Host "Extracted JSON: $extractedJsonPath"
         Write-Host "Patch definition JSON: $patchDefinitionPath"
         Write-Host "New offline bundle: $newOfflineBundlePath"
+        Write-Host "New image profile name: $newImageProfile"
+        Write-Host "New image profile ISO: $($newImageProfile).iso"
+        Write-Host "New image profile depot ZIP: $($newImageProfile)-depot.zip"
     }
     finally {
         if ($mountedIsoRoot -and (Test-Path -LiteralPath $mountedIsoRoot)) {
