@@ -66,6 +66,31 @@ function Assert-PowerCliPythonConfiguration {
     else {
         Write-Host "Verified PowerCLI PythonPath: $pythonPath"
     }
+
+    $requiredPythonPackages = [ordered]@{
+        six       = 'six'
+        psutil    = 'psutil'
+        lxml      = 'lxml'
+        pyopenssl = 'OpenSSL'
+    }
+
+    $missingPythonPackages = [System.Collections.Generic.List[string]]::new()
+    foreach ($packageName in $requiredPythonPackages.Keys) {
+        $moduleName = $requiredPythonPackages[$packageName]
+        $importCheck = "import importlib.util, sys; sys.exit(0 if importlib.util.find_spec('$moduleName') is not None else 1)"
+
+        & $pythonPath -c $importCheck 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            $missingPythonPackages.Add($packageName)
+        }
+    }
+
+    if ($missingPythonPackages.Count -gt 0) {
+        $missingList = $missingPythonPackages -join ', '
+        throw "Required Python packages are missing for PowerCLI: $missingList. Install them with: `"$pythonPath`" -m pip install $missingList"
+    }
+
+    Write-Host 'Verified required Python packages: six, psutil, lxml, pyopenssl'
 }
 
 function Show-OpenFileDialog {
