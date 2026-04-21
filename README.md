@@ -80,7 +80,7 @@ If `-WorkingDirectory` is not provided, the script uses the directory that conta
 
 ### Examples
 
-### Windows Example
+#### Windows Example
 
 ```powershell
 pwsh ./build-hpe-synergy-esxiupdate-crossplatform.ps1 \
@@ -89,7 +89,7 @@ pwsh ./build-hpe-synergy-esxiupdate-crossplatform.ps1 \
 	-WorkingDirectory 'D:\ESXi-Output'
 ```
 
-### Example Without WorkingDirectory
+#### Example Without WorkingDirectory
 
 ```powershell
 pwsh ./build-hpe-synergy-esxiupdate-crossplatform.ps1 \
@@ -99,7 +99,7 @@ pwsh ./build-hpe-synergy-esxiupdate-crossplatform.ps1 \
 
 In this case, outputs are created in the script's folder.
 
-### Linux Example
+#### Linux Example
 
 ```bash
 pwsh ./build-hpe-synergy-esxiupdate-crossplatform.ps1 \
@@ -154,8 +154,7 @@ User experience differences between `build-hpe-synergy-esxiupdate.ps1` and `buil
 
 VMware.PowerCLI 13.3.0.24145083
 
-**Python**
-Python 3.12.10
+**Python** 3.12.10
 
 **Python Packages**
 | Package       | Version |
@@ -183,8 +182,7 @@ Python 3.12.10
 
 VCF.PowerCLI 9.0.0.24798382
 
-**Python**
-Python 3.12.3
+**Python** 3.12.3
 
 **Python Packages**
 | Package       | Version |
