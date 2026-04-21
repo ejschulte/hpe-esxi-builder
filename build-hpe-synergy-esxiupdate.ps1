@@ -206,7 +206,7 @@ function Copy-SelectedZip {
     return $destinationZipPath
 }
 
-function Move-ZipToWorkingDirectory {
+function Copy-ZipToWorkingDirectory {
     param(
         [Parameter(Mandatory)]
         [string]$SourceZipPath,
@@ -232,8 +232,8 @@ function Move-ZipToWorkingDirectory {
         return $destinationZipPath
     }
 
-    Write-Host "Moving $Description to working directory: $destinationZipPath"
-    Move-Item -LiteralPath $sourceFullPath -Destination $destinationZipPath
+    Write-Host "Copying $Description to working directory: $destinationZipPath"
+    Copy-Item -LiteralPath $sourceFullPath -Destination $destinationZipPath
     return $destinationZipPath
 }
 
@@ -516,7 +516,7 @@ function Main {
 
         $workingDirectory = $scriptDirectory
         Write-Host "Working directory: $workingDirectory"
-        $workingDepotZipPath = Move-ZipToWorkingDirectory -SourceZipPath $depotZipPath -WorkingDirectory $workingDirectory -Description 'selected VMware depot ZIP file'
+        $workingDepotZipPath = Copy-ZipToWorkingDirectory -SourceZipPath $depotZipPath -WorkingDirectory $workingDirectory -Description 'selected VMware depot ZIP file'
         $selectedBaseImageVersion = Get-SelectedDepotBaseImageVersion -DepotZipPath $workingDepotZipPath
 
         $copiedZipPath = Copy-SelectedZip -SourceZipPath $selectedZipPath -WorkingDirectory $workingDirectory
