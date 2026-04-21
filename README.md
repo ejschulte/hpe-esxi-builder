@@ -1,8 +1,8 @@
 # HPE ESXi Builder
 
-This repository contains two PowerShell scripts for building patch bundles and ESXi iso files that combine Synergy SSP artifacts with ESX builds.
+This repository contains two PowerShell scripts for building patch bundles and ESXi ISO files that combine Synergy SPP artifacts with ESXi builds.
 
-There are two scripts provided
+There are two scripts provided:
 1. `build-hpe-synergy-esxiupdate-crossplatform.ps1` for both Windows and Linux
 2. `build-hpe-synergy-esxiupdate.ps1` for Windows only
 
@@ -18,17 +18,17 @@ There are two scripts provided
 ### Setting up your environment
 
 **Windows**
-1. Install python
-2. Install python packages
+1. Install Python
+2. Install Python packages
     - `pip install six psutil lxml pyopenssl`
 3. Install VCF.PowerCLI
-    - Launch PowerShell as Administrator and execute `install-module VCF.PowerCLI`
-4. Find the path to your python executable
+	- Launch PowerShell as Administrator and execute `Install-Module VCF.PowerCLI`
+4. Find the path to your Python executable
     - Launch cmd.exe and execute the command `where python`
 5. Set the PythonPath for VCF.PowerCLI
-    -  `Set-PowerCliConfiguration -PythonPath c:\path\to\python -Scope User`
-6. Verify PythonPath by executing 
-    - `Get-PowerCLIConfiguration | Select-Object -property PythonPath`
+	- `Set-PowerCLIConfiguration -PythonPath c:\path\to\python -Scope User`
+6. Verify PythonPath by executing
+	- `Get-PowerCLIConfiguration | Select-Object -Property PythonPath`
 7. Download the VMware depot file and Synergy SPP ISO from the appropriate sources.
 
 **Linux**
@@ -41,20 +41,20 @@ Python is usually pre-installed on Linux distributions.
 3. ***Recommended*** Create a virtual environment. This may require a support package to be installed.  
     - `python3 -m venv .venv`
 4. Activate your virtual environment
-    - `source -m .venv/bin/activate`
+    - `source .venv/bin/activate`
 5. Install the required packages
     - `pip install six psutil lxml pyopenssl`
-6. Find the python path
+6. Find the Python path
     - `which python`
 7. Set the PythonPath for VCF.PowerCLI
-    -  `pwsh -Command Set-PowerCliConfiguration -PythonPath /path/to/venv/python -Scope User`
-8. Verify PythonPath by executing 
-    - `pwsh -Command Get-PowerCLIConfiguration | Select-Object -property PythonPath`
+	- `pwsh -Command Set-PowerCLIConfiguration -PythonPath /path/to/venv/python -Scope User`
+8. Verify PythonPath by executing
+	- `pwsh -Command Get-PowerCLIConfiguration | Select-Object -Property PythonPath`
 9. Download the VMware depot file and Synergy SPP ISO from the appropriate sources.
 
 ## What do these scripts do?
 
-Automate creation of a patched ESXi image profile and export artifacts from an HPE Synergy SPP ISO and a VMware depot ZIP.
+Automates the creation of a patched ESXi image profile and exports artifacts from an HPE Synergy SPP ISO and a VMware depot ZIP.
 
 In brief:
 
@@ -66,7 +66,7 @@ In brief:
 - Builds a new offline bundle via `New-OfflineBundle`, adds it to the software depot, clones an ESXi image profile, and names the new profile using HPE package/build metadata.
 - Exports the new image profile to both ISO and offline bundle ZIP, prints output locations, and dismounts the ISO in cleanup.
 
-## Cross platform script usage
+## Cross-platform script usage
 
 Run the script from PowerShell 7.
 
@@ -78,7 +78,7 @@ Parameters:
 
 If `-WorkingDirectory` is not provided, the script uses the directory that contains `build-hpe-synergy-esxiupdate-crossplatform.ps1`.
 
-### Example With All Parameters
+### Examples
 
 ### Windows Example
 
@@ -120,19 +120,19 @@ On success, it writes the generated offline bundle, profile ISO, and profile dep
 User experience differences between `build-hpe-synergy-esxiupdate.ps1` and `build-hpe-synergy-esxiupdate-crossplatform.ps1`:
 
 - Platform support:
-	- Windows-only script runs only on Windows.
-	- Cross-platform script runs on Windows and Linux.
+    - Windows-only script runs only on Windows.
+    - Cross-platform script runs on Windows and Linux.
 - How inputs are provided:
-	- Windows-only script is interactive with Windows file/folder dialogs.  No input parameters.
-	- Cross-platform script uses command-line parameters (`-SynergySppIsoPath`, `-VmwareDepotZipPath`, optional `-WorkingDirectory`).
+    - Windows-only script is interactive with Windows file/folder dialogs. No input parameters.
+    - Cross-platform script uses command-line parameters (`-SynergySppIsoPath`, `-VmwareDepotZipPath`, optional `-WorkingDirectory`).
 - Interactivity style:
-	- Windows-only script uses GUI dialogs plus a console choice prompt for base image version.
-	- Cross-platform script uses console prompts only (ZIP selection and base image selection when multiple options exist).
+    - Windows-only script uses GUI dialogs plus a console choice prompt for base image version.
+    - Cross-platform script uses console prompts only (ZIP selection and base image selection when multiple options exist).
 - Working directory behavior:
-	- Windows-only script always writes to the script directory.
-	- Cross-platform script writes to `-WorkingDirectory` when provided; otherwise it also defaults to the script directory.
+    - Windows-only script always writes to the script directory.
+    - Cross-platform script writes to `-WorkingDirectory` when provided; otherwise it also defaults to the script directory.
 - Linux-specific behavior (cross-platform script):
-	- Mount/umount operations may require root or `sudo`, so you can be prompted for elevation.
+    - Mount/umount operations may require root or `sudo`, so you can be prompted for elevation.
 
 ## Tested Environment
 
