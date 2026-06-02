@@ -32,6 +32,7 @@ There are two scripts provided:
 7. Download the VMware depot file and Synergy SPP ISO from the appropriate sources.
 
 **Linux**
+
 Python is usually pre-installed on Linux distributions.
 
 1. Install PowerShell
