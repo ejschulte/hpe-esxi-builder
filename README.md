@@ -1,10 +1,11 @@
 # HPE ESXi Builder
 
-This repository contains two PowerShell scripts for building patch bundles and ESXi ISO files that combine Synergy SPP artifacts with ESXi builds.
+This repository contains PowerShell scripts for building patch bundles and ESXi ISO files that combine Synergy or Proliant SPP artifacts with ESXi builds.
 
-There are two scripts provided:
+There are three scripts provided:
 1. `build-hpe-synergy-esxiupdate-crossplatform.ps1` for both Windows and Linux
 2. `build-hpe-synergy-esxiupdate.ps1` for Windows only
+3. `build-hpe-proliant-esxiupdate-crossplatform.ps1` for processing an array of Proliant SPP ISOs on Windows and Linux
 
 ## Prerequisites
 1. Python 3.7 or greater
@@ -115,6 +116,37 @@ The script may prompt you to select:
 - A VMware base image version (if multiple versions are available)
 
 On success, it writes the generated offline bundle, profile ISO, and profile depot ZIP into the working directory and prints their paths.
+
+## Proliant multi-ISO usage
+
+Run `build-hpe-proliant-esxiupdate-crossplatform.ps1` from PowerShell 7 with the same prerequisites as the Synergy cross-platform script and Proliant SPP ISOs.
+
+- `-ProliantSppIsoPath` (mandatory): An array of paths to Proliant SPP ISO files (`.iso`). A single path is also accepted.
+- `-VmwareDepotZipPath` (mandatory): Path to the VMware depot ZIP (`.zip`).
+- `-WorkingDirectory` (optional): Output directory; defaults to the Proliant script's directory.
+
+All path parameters accept absolute or relative paths. Relative paths are resolved from the current PowerShell location (`Get-Location`), not the script's directory. A relative working directory does not need to exist yet.
+
+```powershell
+$sppIsos = @(
+    'D:\ISOs\Proliant_Gen11_SPP.iso'
+    'D:\ISOs\Proliant_Gen12_SPP.iso'
+)
+.\build-hpe-proliant-esxiupdate-crossplatform.ps1 `
+    -ProliantSppIsoPath $sppIsos `
+    -VmwareDepotZipPath 'D:\Depot\VMware-ESXi-depot.zip' `
+    -WorkingDirectory 'D:\ESXi-Output'
+```
+
+On Linux, invoke the script from PowerShell with Linux paths.
+
+The script validates every input ISO before mounting any, copies the VMware depot once, and selects a shared base image version once. It then processes each ISO sequentially, prompting for a ZIP under `manifest/vmw` when necessary. Each ISO produces a new cumulative offline bundle containing the components from all SPPs processed so far, which is added to the current PowerCLI session's ESXi software depot. Identical component versions are shared; conflicting versions of the same component stop processing with an error.
+
+After every SPP has been processed successfully, the script selects a source profile from the final cumulative bundle and clones it once. That single combined image profile is exported once as an ISO and once as a depot ZIP into the working directory. Its name includes the distinct SPP package versions and the base image build.
+
+Intermediate files and cumulative bundles are isolated in numbered subdirectories such as `001-Proliant_Gen11_SPP` beneath the working directory. Copied SPP ZIPs and extracted metadata are refreshed on subsequent runs rather than reusing stale files.
+
+Each mounted ISO is dismounted in cleanup. A processing error stops the script without cloning or exporting a final profile; intermediate bundles and imported depots from previously completed ISOs remain available.
 
 ## Windows-Only vs Cross-Platform Usage
 
