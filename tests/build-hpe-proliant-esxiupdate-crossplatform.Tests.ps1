@@ -19,6 +19,7 @@ foreach ($statement in $scriptAst.EndBlock.Statements) {
 function Get-DepotBaseImages { param($DepotZipPath) }
 function New-OfflineBundle { param($Depots, $VendorName, $VendorCode, $SoftwareSpec, $Destination) }
 function Add-EsxSoftwareDepot { param($DepotUrl) }
+function Remove-EsxSoftwareDepot { [CmdletBinding()] param($SoftwareDepot) }
 function Get-EsxImageProfile { param($SoftwareDepot) }
 function New-EsxImageProfile { param($CloneProfile, $Name, $Vendor) }
 function Export-EsxImageProfile { param($ImageProfile, [switch]$ExportToIso, [switch]$ExportToBundle, $FilePath) }
@@ -112,6 +113,7 @@ Describe 'Proliant SPP array processing' {
             Set-Content -LiteralPath $Destination -Value 'offline bundle'
         }
         Mock Add-EsxSoftwareDepot { [pscustomobject]@{ DepotUrl = $DepotUrl } }
+        Mock Remove-EsxSoftwareDepot {}
         Mock Get-EsxImageProfile {
             if (-not (Test-Path -LiteralPath $SoftwareDepot.DepotUrl -PathType Leaf)) {
                 throw 'Expected the current offline bundle to be imported before selecting its profile.'
@@ -129,6 +131,9 @@ Describe 'Proliant SPP array processing' {
     }
 
     It 'builds one combined bundle from all SPPs before cloning once and exporting one ISO and one ZIP' {
+        Mock Remove-EsxSoftwareDepot {
+            $script:exportPaths.Count | Should Be 2
+        }
         Main
 
         $script:bundleCalls.Count | Should Be 1
@@ -149,6 +154,8 @@ Describe 'Proliant SPP array processing' {
         Assert-MockCalled Add-EsxSoftwareDepot -Scope It -Times 1 -Exactly -ParameterFilter { $DepotUrl -eq $script:bundleCalls[0].Destination }
         $script:profileNames.Count | Should Be 1
         $script:exportPaths.Count | Should Be 2
+        $script:exportPaths[0] | Should Be (Join-Path $script:WorkingDirectory 'HPE-Proliant-2026.01-12345-custom-ESXi.iso')
+        $script:exportPaths[1] | Should Be (Join-Path $script:WorkingDirectory 'HPE-Proliant-2026.01-12345-custom-ESXi-depot.zip')
         foreach ($path in $script:exportPaths) {
             (Test-Path -LiteralPath $path) | Should Be $true
             (Split-Path $path -Parent) | Should Be $script:WorkingDirectory
@@ -159,8 +166,17 @@ Describe 'Proliant SPP array processing' {
         Assert-MockCalled New-EsxImageProfile -Scope It -Times 1 -Exactly -ParameterFilter { $CloneProfile.DepotUrl -eq $script:bundleCalls[0].Destination }
         Assert-MockCalled Export-EsxImageProfile -Scope It -Times 1 -Exactly -ParameterFilter { $ExportToIso }
         Assert-MockCalled Export-EsxImageProfile -Scope It -Times 1 -Exactly -ParameterFilter { $ExportToBundle }
+        Assert-MockCalled Remove-EsxSoftwareDepot -Scope It -Times 1 -Exactly -ParameterFilter { $SoftwareDepot.DepotUrl -eq $script:bundleCalls[0].Destination }
         Assert-MockCalled Get-DepotBaseImages -Scope It -Times 1 -Exactly
         Assert-MockCalled Dismount-IsoImage -Scope It -Times 2 -Exactly
+    }
+
+    It 'disconnects the combined depot even when profile export fails' {
+        Mock Export-EsxImageProfile { throw 'Profile export failed' }
+
+        { Main } | Should Throw 'Profile export failed'
+
+        Assert-MockCalled Remove-EsxSoftwareDepot -Scope It -Times 1 -Exactly -ParameterFilter { $SoftwareDepot.DepotUrl -eq $script:bundleCalls[0].Destination }
     }
 
     It 'supports a single ISO and refreshes stale copied payloads and extracted metadata' {

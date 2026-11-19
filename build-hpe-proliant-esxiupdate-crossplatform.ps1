@@ -680,7 +680,6 @@ function Main {
     $copiedSppZipPaths = [System.Collections.Generic.List[string]]::new()
     $extractedMetadataJsonPaths = [System.Collections.Generic.List[string]]::new()
     $hardwareSupportPackageVersions = [System.Collections.Generic.List[string]]::new()
-    $softwareDepot = $null
 
     for ($isoIndex = 0; $isoIndex -lt $resolvedIsoPaths.Count; $isoIndex++) {
         $resolvedIsoPath = $resolvedIsoPaths[$isoIndex]
@@ -739,20 +738,30 @@ function Main {
     Write-Host "Adding final combined bundle to software depot: $finalCombinedOfflineBundlePath"
     $softwareDepot = Add-EsxSoftwareDepot $finalCombinedOfflineBundlePath
 
-    Write-Host "Creating one image profile based on $selectedBaseImageVersion with all HPE SPP components"
-    $cloneProfile = Get-CloneImageProfile -SelectedBaseImageVersion $selectedBaseImageVersion -SoftwareDepot $softwareDepot
-    $cloneProfileName = $cloneProfile.Name
-    $baseImageBuild = $cloneProfileName.Split('.')[-1]
-    $packageVersionLabel = @($hardwareSupportPackageVersions | Select-Object -Unique) -join '_'
-    $newImageProfile = "HPE-Proliant-$packageVersionLabel-$baseImageBuild"
+    try {
+        Write-Host "Creating one image profile based on $selectedBaseImageVersion with all HPE SPP components"
+        $cloneProfile = Get-CloneImageProfile -SelectedBaseImageVersion $selectedBaseImageVersion -SoftwareDepot $softwareDepot
+        $cloneProfileName = $cloneProfile.Name
+        $baseImageBuild = $cloneProfileName.Split('.')[-1]
+        $packageVersionLabel = @($hardwareSupportPackageVersions | Select-Object -Unique) -join '_'
+        $newImageProfile = "HPE-Proliant-$packageVersionLabel-$baseImageBuild"
 
-    New-EsxImageProfile -CloneProfile $cloneProfile -Name $newImageProfile -Vendor 'HPE' | Out-Null
+        New-EsxImageProfile -CloneProfile $cloneProfile -Name $newImageProfile -Vendor 'HPE' | Out-Null
 
-    $newImageProfileIsoPath = Join-Path -Path $workingDirectoryPath -ChildPath ("{0}.iso" -f $newImageProfile)
-    $newImageProfileBundlePath = Join-Path -Path $workingDirectoryPath -ChildPath ("{0}-depot.zip" -f $newImageProfile)
+        $newImageProfileIsoPath = Join-Path -Path $workingDirectoryPath -ChildPath ("{0}-custom-ESXi.iso" -f $newImageProfile)
+        $newImageProfileBundlePath = Join-Path -Path $workingDirectoryPath -ChildPath ("{0}-custom-ESXi-depot.zip" -f $newImageProfile)
 
-    Export-EsxImageProfile -ImageProfile $newImageProfile -ExportToIso -FilePath $newImageProfileIsoPath
-    Export-EsxImageProfile -ImageProfile $newImageProfile -ExportToBundle -FilePath $newImageProfileBundlePath
+        Export-EsxImageProfile -ImageProfile $newImageProfile -ExportToIso -FilePath $newImageProfileIsoPath
+        Export-EsxImageProfile -ImageProfile $newImageProfile -ExportToBundle -FilePath $newImageProfileBundlePath
+    }
+    finally {
+        try {
+            Remove-EsxSoftwareDepot -SoftwareDepot $softwareDepot -ErrorAction Stop | Out-Null
+        }
+        catch {
+            Write-Warning "Could not disconnect the combined depot '$finalCombinedOfflineBundlePath': $($_.Exception.Message). Close this PowerShell session before retrying."
+        }
+    }
 
     Write-Host 'All Proliant SPP ISOs completed successfully.'
     Write-Host "Clone profile used: $cloneProfileName"
