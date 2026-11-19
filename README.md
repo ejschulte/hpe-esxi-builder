@@ -140,13 +140,13 @@ $sppIsos = @(
 
 On Linux, invoke the script from PowerShell with Linux paths.
 
-The script validates every input ISO before mounting any, copies the VMware depot once, and selects a shared base image version once. It then processes each ISO sequentially, prompting for a ZIP under `manifest/vmw` when necessary. Each ISO produces a new cumulative offline bundle containing the components from all SPPs processed so far, which is added to the current PowerCLI session's ESXi software depot. Identical component versions are shared; conflicting versions of the same component stop processing with an error.
+The script validates every input ISO before mounting any, copies the VMware depot once, and selects a shared base image version once. It then processes each ISO sequentially, prompting for a ZIP under `manifest/vmw` when necessary. It accumulates the copied SPP ZIPs and updates the root-level `ProliantPatch-softwarespec.json` with the components from each processed SPP. Identical component versions are shared; conflicting versions of the same component stop processing with an error.
 
-After every SPP has been processed successfully, the script selects a source profile from the final cumulative bundle and clones it once. That single combined image profile is exported once as an ISO and once as a depot ZIP into the working directory. Its name includes the distinct SPP package versions and the base image build.
+After every SPP has been processed successfully, the script creates one combined offline bundle from the VMware depot and all SPP ZIPs using the accumulated software spec, and adds that bundle to the current PowerCLI session's ESXi software depot. It selects a source profile from the combined bundle, clones it once, and exports the combined image profile once as an ISO and once as a depot ZIP into the working directory. Its name includes the distinct SPP package versions and the base image build.
 
-Intermediate files and cumulative bundles are isolated in numbered subdirectories such as `001-Proliant_Gen11_SPP` beneath the working directory. Copied SPP ZIPs and extracted metadata are refreshed on subsequent runs rather than reusing stale files.
+Intermediate files, copied SPP ZIPs, and extracted metadata are isolated in numbered subdirectories such as `001-Proliant_Gen11_SPP` beneath the working directory. The final combined offline bundle and accumulated software spec are written to the working directory. Copied SPP ZIPs and extracted metadata are refreshed on subsequent runs rather than reusing stale files.
 
-Each mounted ISO is dismounted in cleanup. A processing error stops the script without cloning or exporting a final profile; intermediate bundles and imported depots from previously completed ISOs remain available.
+Each mounted ISO is dismounted in cleanup. A processing error stops the script without creating or importing the final combined bundle or cloning or exporting a final profile; intermediate copied files and metadata remain available.
 
 ## Windows-Only vs Cross-Platform Usage
 

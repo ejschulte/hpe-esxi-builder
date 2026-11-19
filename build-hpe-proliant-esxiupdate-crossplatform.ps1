@@ -707,22 +707,10 @@ function Main {
             $extractedJsonPath = Expand-MetadataJson -OuterZipPath $copiedZipPath -WorkingDirectory $isoWorkingDirectory
             $copiedSppZipPaths.Add($copiedZipPath)
             $extractedMetadataJsonPaths.Add($extractedJsonPath)
-            $patchDefinitionPath = New-PatchDefinitionFile -ExtractedMetadataJsonPath $extractedMetadataJsonPaths.ToArray() -BaseImageVersion $selectedBaseImageVersion -WorkingDirectory $isoWorkingDirectory
+            $patchDefinitionPath = New-PatchDefinitionFile -ExtractedMetadataJsonPath $extractedMetadataJsonPaths.ToArray() -BaseImageVersion $selectedBaseImageVersion -WorkingDirectory $workingDirectoryPath
 
             $hardwareSupportPackageVersion = Get-HardwareSupportPackageVersion -ManifestJsonPath $extractedJsonPath
             $hardwareSupportPackageVersions.Add($hardwareSupportPackageVersion)
-            $newOfflineBundlePath = Join-Path -Path $isoWorkingDirectory -ChildPath ("{0}-depot.zip" -f $hardwareSupportPackageVersion)
-
-            Write-Host "Creating new ESXi offline bundle: $newOfflineBundlePath"
-            New-OfflineBundle `
-                -Depots (@($workingDepotZipPath) + $copiedSppZipPaths.ToArray()) `
-                -VendorName 'HPE' `
-                -VendorCode 'HEP' `
-                -SoftwareSpec $patchDefinitionPath `
-                -Destination $newOfflineBundlePath
-
-            Write-Host "Adding bundle to software depot: $newOfflineBundlePath"
-            $softwareDepot = Add-EsxSoftwareDepot $newOfflineBundlePath
 
             Write-Host ''
             Write-Host "Completed ISO: $resolvedIsoPath"
@@ -730,8 +718,7 @@ function Main {
             Write-Host "Selected base image version: $selectedBaseImageVersion"
             Write-Host "Copied ZIP: $copiedZipPath"
             Write-Host "Extracted JSON: $extractedJsonPath"
-            Write-Host "Patch definition JSON: $patchDefinitionPath"
-            Write-Host "New offline bundle: $newOfflineBundlePath"
+            Write-Host "Cumulative patch definition JSON: $patchDefinitionPath"
         }
         finally {
             if ($mountInfo) {
@@ -739,6 +726,18 @@ function Main {
             }
         }
     }
+
+    $finalCombinedOfflineBundlePath = Join-Path -Path $workingDirectoryPath -ChildPath 'ProliantPatch-combined-depot.zip'
+    Write-Host "Creating final combined ESXi offline bundle: $finalCombinedOfflineBundlePath"
+    New-OfflineBundle `
+        -Depots (@($workingDepotZipPath) + $copiedSppZipPaths.ToArray()) `
+        -VendorName 'HPE' `
+        -VendorCode 'HEP' `
+        -SoftwareSpec $patchDefinitionPath `
+        -Destination $finalCombinedOfflineBundlePath
+
+    Write-Host "Adding final combined bundle to software depot: $finalCombinedOfflineBundlePath"
+    $softwareDepot = Add-EsxSoftwareDepot $finalCombinedOfflineBundlePath
 
     Write-Host "Creating one image profile based on $selectedBaseImageVersion with all HPE SPP components"
     $cloneProfile = Get-CloneImageProfile -SelectedBaseImageVersion $selectedBaseImageVersion -SoftwareDepot $softwareDepot

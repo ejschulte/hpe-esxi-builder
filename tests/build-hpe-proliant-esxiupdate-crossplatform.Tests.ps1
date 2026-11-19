@@ -128,27 +128,25 @@ Describe 'Proliant SPP array processing' {
         }
     }
 
-    It 'combines all SPP components before cloning once and exporting one ISO and one ZIP' {
+    It 'builds one combined bundle from all SPPs before cloning once and exporting one ISO and one ZIP' {
         Main
 
-        $script:bundleCalls.Count | Should Be 2
-        $script:bundleCalls[0].Components.Count | Should Be 2
-        $script:bundleCalls[1].Components.Count | Should Be 3
-        $script:bundleCalls[1].Components['driver-0'].version | Should Be 'version-0'
-        $script:bundleCalls[1].Components['driver-1'].version | Should Be 'version-1'
-        $script:bundleCalls[1].Components.shared.version | Should Be 'shared-version'
+        $script:bundleCalls.Count | Should Be 1
+        $script:bundleCalls[0].Components.Count | Should Be 3
+        $script:bundleCalls[0].Components['driver-0'].version | Should Be 'version-0'
+        $script:bundleCalls[0].Components['driver-1'].version | Should Be 'version-1'
+        $script:bundleCalls[0].Components.shared.version | Should Be 'shared-version'
         $script:bundleCalls[0].BaseVersion | Should Be '8.0.3'
-        $script:bundleCalls[1].BaseVersion | Should Be '8.0.3'
-        $script:bundleCalls[0].Destination | Should Not Be $script:bundleCalls[1].Destination
-        foreach ($call in $script:bundleCalls) {
-            (Test-Path -LiteralPath $call.Destination) | Should Be $true
-            $call.Depots[0] | Should Be (Join-Path $script:WorkingDirectory 'vmware.zip')
-            Assert-MockCalled Add-EsxSoftwareDepot -Scope It -Times 1 -Exactly -ParameterFilter { $DepotUrl -eq $call.Destination }
-        }
-        $script:bundleCalls[0].Depots.Count | Should Be 2
-        $script:bundleCalls[1].Depots.Count | Should Be 3
-        $script:bundleCalls[1].Depots[1] | Should Be $script:bundleCalls[0].Depots[1]
-        $script:bundleCalls[1].Depots[2] | Should Be (Join-Path $script:WorkingDirectory '002-second\payload.zip')
+        (Test-Path -LiteralPath $script:bundleCalls[0].Destination) | Should Be $true
+        $script:bundleCalls[0].Depots.Count | Should Be 3
+        $script:bundleCalls[0].Depots[0] | Should Be (Join-Path $script:WorkingDirectory 'vmware.zip')
+        $script:bundleCalls[0].Depots[1] | Should Be (Join-Path $script:WorkingDirectory '001-first\payload.zip')
+        $script:bundleCalls[0].Depots[2] | Should Be (Join-Path $script:WorkingDirectory '002-second\payload.zip')
+        $script:bundleCalls[0].SoftwareSpec | Should Be (Join-Path $script:WorkingDirectory 'ProliantPatch-softwarespec.json')
+        $script:bundleCalls[0].Destination | Should Be (Join-Path $script:WorkingDirectory 'ProliantPatch-combined-depot.zip')
+        Assert-MockCalled New-OfflineBundle -Scope It -Times 1 -Exactly
+        Assert-MockCalled Add-EsxSoftwareDepot -Scope It -Times 1 -Exactly
+        Assert-MockCalled Add-EsxSoftwareDepot -Scope It -Times 1 -Exactly -ParameterFilter { $DepotUrl -eq $script:bundleCalls[0].Destination }
         $script:profileNames.Count | Should Be 1
         $script:exportPaths.Count | Should Be 2
         foreach ($path in $script:exportPaths) {
@@ -156,9 +154,9 @@ Describe 'Proliant SPP array processing' {
             (Split-Path $path -Parent) | Should Be $script:WorkingDirectory
         }
         Assert-MockCalled Get-EsxImageProfile -Scope It -Times 1 -Exactly
-        Assert-MockCalled Get-EsxImageProfile -Scope It -Times 1 -Exactly -ParameterFilter { $SoftwareDepot.DepotUrl -eq $script:bundleCalls[1].Destination }
+        Assert-MockCalled Get-EsxImageProfile -Scope It -Times 1 -Exactly -ParameterFilter { $SoftwareDepot.DepotUrl -eq $script:bundleCalls[0].Destination }
         Assert-MockCalled New-EsxImageProfile -Scope It -Times 1 -Exactly
-        Assert-MockCalled New-EsxImageProfile -Scope It -Times 1 -Exactly -ParameterFilter { $CloneProfile.DepotUrl -eq $script:bundleCalls[1].Destination }
+        Assert-MockCalled New-EsxImageProfile -Scope It -Times 1 -Exactly -ParameterFilter { $CloneProfile.DepotUrl -eq $script:bundleCalls[0].Destination }
         Assert-MockCalled Export-EsxImageProfile -Scope It -Times 1 -Exactly -ParameterFilter { $ExportToIso }
         Assert-MockCalled Export-EsxImageProfile -Scope It -Times 1 -Exactly -ParameterFilter { $ExportToBundle }
         Assert-MockCalled Get-DepotBaseImages -Scope It -Times 1 -Exactly
@@ -194,7 +192,7 @@ Describe 'Proliant SPP array processing' {
 
             Main
 
-            $script:bundleCalls.Count | Should Be 2
+            $script:bundleCalls.Count | Should Be 1
             $script:bundleCalls[0].Depots[0] | Should Be (Join-Path $expectedWorkingDirectory 'vmware.zip')
             $script:exportPaths.Count | Should Be 2
             foreach ($path in $script:exportPaths) {
@@ -225,21 +223,22 @@ Describe 'Proliant SPP array processing' {
 
         { Main } | Should Throw "Conflicting versions for component 'driver-0'"
 
-        $script:bundleCalls.Count | Should Be 1
-        Assert-MockCalled Add-EsxSoftwareDepot -Scope It -Times 1 -Exactly
+        $script:bundleCalls.Count | Should Be 0
+        Assert-MockCalled Add-EsxSoftwareDepot -Scope It -Times 0 -Exactly
         Assert-MockCalled Dismount-IsoImage -Scope It -Times 2 -Exactly
         Assert-MockCalled Get-EsxImageProfile -Scope It -Times 0 -Exactly
         Assert-MockCalled New-EsxImageProfile -Scope It -Times 0 -Exactly
         Assert-MockCalled Export-EsxImageProfile -Scope It -Times 0 -Exactly
     }
 
-    It 'dismounts the failing ISO and stops without processing later entries' {
+    It 'dismounts all ISOs before a combined bundle failure and stops before profile export' {
         Mock New-OfflineBundle { throw 'Bundle creation failed' }
 
         { Main } | Should Throw 'Bundle creation failed'
 
-        Assert-MockCalled Mount-IsoImage -Scope It -Times 1 -Exactly
-        Assert-MockCalled Dismount-IsoImage -Scope It -Times 1 -Exactly -ParameterFilter { $MountInfo.IsoPath -eq $script:ProliantSppIsoPath[0] }
+        Assert-MockCalled Mount-IsoImage -Scope It -Times 2 -Exactly
+        Assert-MockCalled Dismount-IsoImage -Scope It -Times 2 -Exactly
+        Assert-MockCalled New-OfflineBundle -Scope It -Times 1 -Exactly
         Assert-MockCalled Add-EsxSoftwareDepot -Scope It -Times 0 -Exactly
         Assert-MockCalled New-EsxImageProfile -Scope It -Times 0 -Exactly
         Assert-MockCalled Export-EsxImageProfile -Scope It -Times 0 -Exactly
