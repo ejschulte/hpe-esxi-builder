@@ -171,6 +171,12 @@ User experience differences between `build-hpe-synergy-esxiupdate.ps1` and `buil
 
 ## Tested Environment
 
+***Important***:
+
+Testing revealed a compatibility conflict between PowerShell 7.7.0 (built on .NET 11) and VCF.PowerCLI 9.1.1.
+
+In .NET 11 (which powers PowerShell 7.7), SafeFileHandle.InitThreadPoolBinding() throws an ArgumentException (HResult: -2147024809) when a file or named-pipe handle opened without FileOptions.Asynchronous is passed into an asynchronous FileStream or pipe operation. VMware.ImageBuilder inside VCF.PowerCLI 9.1.1 communicates with its background Python worker process using anonymous/named pipes or file streams that trigger this stricter .NET 11 handle validation.
+
 ### Windows 11
 
 **PowerShell**
@@ -187,7 +193,7 @@ User experience differences between `build-hpe-synergy-esxiupdate.ps1` and `buil
 | `SerializationVersion` | `1.1.0.1` |
 | `WSManStackVersion` | `3.0` |
 
-VMware.PowerCLI 13.3.0.24145083
+VCF.PowerCLI 9.1.1.25718932 (currently installed; VMware.PowerCLI 13.3.0.24145083 was previously tested)
 
 **Python** 3.12.10
 
